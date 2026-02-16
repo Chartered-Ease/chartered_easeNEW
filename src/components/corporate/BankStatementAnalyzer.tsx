@@ -593,7 +593,7 @@ export const BankStatementAnalyzer: React.FC<{ onBack: () => void }> = ({ onBack
                     <div className="space-y-4">
                         <div className="flex justify-between">
                             <h3 className="font-bold text-gray-700">Unreconciled Bank Transactions</h3>
-                            <span className="text-xs bg-gray-100 px-2 py-1 rounded">Showing transactions with > 60% match confidence</span>
+                            <span className="text-xs bg-gray-100 px-2 py-1 rounded">Showing transactions with &gt; 60% match confidence</span>
                         </div>
                         
                         {transactions.filter(t => !t.matchedInvoiceId && (t as any).suggestedInvoiceId).length === 0 ? (
