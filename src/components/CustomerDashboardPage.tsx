@@ -5,6 +5,7 @@ import { useAppContext } from '../hooks/useAppContext';
 import { useClientManager, Document, downloadFile } from '../hooks/useProfile';
 import { useAssociateManager } from '../hooks/useAssociateManager';
 import { V1Service, getEntityLabel, getServicesForEntity } from '../data/entityServiceCatalog';
+import { createProject } from '../lib/projects';
 
 const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
 const FileIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
@@ -157,6 +158,10 @@ const CustomerDashboardPage: React.FC = () => {
     const [dashboardPanel, setDashboardPanel] = useState<'pending' | 'ai' | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSearchResults, setShowSearchResults] = useState(false);
+    const [pendingProjectService, setPendingProjectService] = useState<V1Service | null>(null);
+    const [projectEntityId, setProjectEntityId] = useState('');
+    const [isCreatingProject, setIsCreatingProject] = useState(false);
+    const [projectCreationError, setProjectCreationError] = useState('');
     const activeFilingsRef = useRef<HTMLElement | null>(null);
     const servicesSectionRef = useRef<HTMLElement | null>(null);
     const availableServices = useMemo(() => client ? getServicesForEntity(client.entityType) : [], [client]);
@@ -205,6 +210,7 @@ const CustomerDashboardPage: React.FC = () => {
         );
     }
 
+    const projectEntityOptions = allUserEntities.filter(entity => entity.entityType === client.entityType);
     const inProgressCount = applications.filter(app => !['Completed', 'Filed', 'Rejected'].includes(app.status)).length;
     const completedCount = applications.filter(app => ['Completed', 'Filed'].includes(app.status)).length;
     const complianceScore = applications.length === 0
@@ -222,10 +228,62 @@ const CustomerDashboardPage: React.FC = () => {
     };
 
     const handleStartService = (service: V1Service) => {
-        setSelectedClientId(client.id);
-        setSelectedProfileId(null);
-        setSelectedServiceId(service.key);
-        setPage(service.route);
+        if (service.route === 'contact') {
+            setPage('contact');
+            return;
+        }
+
+        setPendingProjectService(service);
+        setProjectEntityId(client.id);
+        setProjectCreationError('');
+    };
+
+    const closeProjectLauncher = () => {
+        if (isCreatingProject) return;
+        setPendingProjectService(null);
+        setProjectEntityId('');
+        setProjectCreationError('');
+    };
+
+    const handleConfirmProjectLaunch = async () => {
+        if (!pendingProjectService) return;
+
+        if (!user?.firebaseUid) {
+            setProjectCreationError('Please continue with Google login so this project can be linked to your Firebase account.');
+            return;
+        }
+
+        const matchingEntities = allUserEntities.filter(entity => entity.entityType === client.entityType);
+        const selectedEntity = matchingEntities.find(entity => entity.id === projectEntityId);
+
+        if (!selectedEntity) {
+            setProjectCreationError('Please select or create an entity before starting this service.');
+            return;
+        }
+
+        setIsCreatingProject(true);
+        setProjectCreationError('');
+
+        try {
+            await createProject({
+                userId: user.firebaseUid,
+                entityId: selectedEntity.id,
+                entityName: selectedEntity.name,
+                entityType: getEntityLabel(selectedEntity.entityType),
+                service: pendingProjectService.name,
+            });
+
+            switchEntity(selectedEntity.id);
+            setSelectedClientId(selectedEntity.id);
+            setSelectedProfileId(null);
+            setSelectedServiceId(pendingProjectService.key);
+            setPendingProjectService(null);
+            setPage(pendingProjectService.route);
+        } catch (error: any) {
+            setProjectCreationError(error?.message || 'Unable to create project. Please try again.');
+        } finally {
+            setIsCreatingProject(false);
+        }
     };
 
     const scrollToAvailableServices = () => {
@@ -821,10 +879,7 @@ const CustomerDashboardPage: React.FC = () => {
                             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                                 {availableServices.map((service, index) => (
                                     <motion.div key={service.key} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.035 }} whileHover={{ y: -5 }} className="rounded-[1.4rem] border border-slate-100 bg-white p-5 shadow-sm">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <h3 className="text-lg font-black text-slate-950">{service.name}</h3>
-                                            <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${service.mode === 'digital' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-ease-blue'}`}>{service.mode === 'digital' ? 'Workflow' : 'Expert'}</span>
-                                        </div>
+                                        <h3 className="text-lg font-black text-slate-950">{service.name}</h3>
                                         <p className="mt-3 min-h-[72px] text-sm leading-6 text-slate-500">{service.description}</p>
                                         <button onClick={() => handleStartService(service)} className={`mt-5 w-full rounded-2xl px-4 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 ${service.route === 'contact' ? 'bg-ease-blue shadow-ease-blue/20' : 'bg-ease-green shadow-emerald-700/20'}`}>
                                             {service.route === 'contact' ? 'Talk to Expert' : 'Get Started'}
@@ -838,6 +893,75 @@ const CustomerDashboardPage: React.FC = () => {
                     </section>
                 </main>
             </div>
+
+            {pendingProjectService && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+                    <button aria-label="Close project launcher" onClick={closeProjectLauncher} className="absolute inset-0 bg-slate-950/35 backdrop-blur-sm" />
+                    <motion.div
+                        initial={{ opacity: 0, y: 24, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        className="relative w-full max-w-xl overflow-hidden rounded-[1.75rem] border border-white/70 bg-white shadow-2xl shadow-slate-900/25"
+                    >
+                        <div className="mesh-surface p-6 text-white">
+                            <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-100">Create project</p>
+                            <h2 className="mt-2 text-2xl font-black">{pendingProjectService.name}</h2>
+                            <p className="mt-2 text-sm leading-6 text-blue-100">Select the entity this service belongs to. A linked project will be created before the workflow opens.</p>
+                        </div>
+
+                        <div className="space-y-5 bg-ease-bg p-6">
+                            {projectEntityOptions.length > 0 ? (
+                                <label className="block">
+                                    <span className="text-xs font-black uppercase tracking-wide text-slate-400">Entity</span>
+                                    <select
+                                        value={projectEntityId}
+                                        onChange={(event) => setProjectEntityId(event.target.value)}
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800 shadow-sm outline-none transition focus:border-ease-electric focus:ring-4 focus:ring-blue-100"
+                                    >
+                                        {projectEntityOptions.map(entity => (
+                                            <option key={entity.id} value={entity.id}>
+                                                {entity.name} - {getEntityLabel(entity.entityType)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                            ) : (
+                                <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-5 text-center">
+                                    <p className="font-black text-slate-950">No matching entity found</p>
+                                    <p className="mt-2 text-sm leading-6 text-slate-500">Create an entity first, then start this service again.</p>
+                                    <button onClick={() => setPage('entity-onboarding')} className="blue-glow-button mt-4 px-5 py-2.5 text-sm">Create Entity</button>
+                                </div>
+                            )}
+
+                            <div className="rounded-3xl border border-slate-100 bg-white p-4">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">Project status</p>
+                                        <p className="mt-1 font-black text-slate-950">Pending</p>
+                                    </div>
+                                    <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-black text-orange-700">Firestore</span>
+                                </div>
+                            </div>
+
+                            {projectCreationError && (
+                                <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{projectCreationError}</div>
+                            )}
+
+                            <div className="flex flex-col gap-3 sm:flex-row">
+                                <button onClick={closeProjectLauncher} disabled={isCreatingProject} className="soft-button flex-1 px-5 py-3 text-sm disabled:opacity-50">
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleConfirmProjectLaunch}
+                                    disabled={isCreatingProject || projectEntityOptions.length === 0}
+                                    className="blue-glow-button flex-1 px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {isCreatingProject ? 'Creating Project...' : 'Create Project & Continue'}
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
 
             {dashboardPanel && (
                 <div className="fixed inset-0 z-50">

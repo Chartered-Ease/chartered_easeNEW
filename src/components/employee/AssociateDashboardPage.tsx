@@ -116,7 +116,6 @@ const AssociateDashboardPage: React.FC = () => {
                                             <td className="p-3 font-medium">{task.clientName}<br/><span className="text-xs text-gray-500 font-normal">{task.profileName}</span></td>
                                             <td className="p-3">
                                                 {task.serviceName}
-                                                {task.filingType === 'expert' && <span className="ml-1 text-xs bg-blue-50 text-blue-600 px-1 rounded">Expert</span>}
                                             </td>
                                             <td className="p-3">
                                                 <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusColors[task.status]}`}>{task.status}</span>
