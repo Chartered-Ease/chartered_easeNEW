@@ -1,9 +1,9 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { browserLocalPersistence, onAuthStateChanged, setPersistence, signInWithPopup, signOut, User as FirebaseUser } from 'firebase/auth';
+import { browserLocalPersistence, GoogleAuthProvider, onAuthStateChanged, setPersistence, signInWithPopup, signOut, User as FirebaseUser } from 'firebase/auth';
 import { useClientManager } from './useProfile';
 import { useAppContext } from './useAppContext';
-import { firebaseAuth, googleProvider } from '../lib/firebase';
+import { firebaseAuth } from '../lib/firebase';
 
 export interface User {
     authProvider: 'phone' | 'google';
@@ -132,7 +132,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     await setPersistence(firebaseAuth, browserLocalPersistence);
-    const result = await signInWithPopup(firebaseAuth, googleProvider);
+    const provider = new GoogleAuthProvider();
+    provider.addScope('profile');
+    provider.addScope('email');
+    provider.setCustomParameters({
+      prompt: 'select_account',
+    });
+
+    const result = await signInWithPopup(firebaseAuth, provider);
     const googleUser = attachExistingEntity(buildGoogleUser(result.user));
     persistCustomerSession(googleUser);
     return googleUser;
