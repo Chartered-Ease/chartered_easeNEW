@@ -1,0 +1,101 @@
+
+import React, { useState } from 'react';
+import { useAdminAuth } from '../../hooks/useAdminAuth';
+import { LoaderIcon } from '../icons/LoaderIcon';
+import { useAppContext } from '../../hooks/useAppContext';
+
+const AdminLoginPage: React.FC = () => {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+    const { login } = useAdminAuth();
+    const { setPage } = useAppContext();
+
+    const handleLogin = (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setIsLoading(true);
+
+        // Simulate network delay
+        setTimeout(() => {
+            const success = login(username, password);
+            if (!success) {
+                setError('Invalid login credentials.');
+            }
+            setIsLoading(false);
+        }, 1000);
+    };
+
+    return (
+        <div className="relative flex items-center justify-center min-h-screen bg-gray-50 px-4 py-12">
+            <button
+                onClick={() => setPage('home')}
+                className="absolute left-4 top-4 text-sm font-semibold text-gray-600 hover:text-ease-blue sm:left-6 sm:top-6"
+            >
+                &larr; Back to Home
+            </button>
+            <div className="w-full max-w-sm p-8 space-y-6 bg-white rounded-lg shadow-xl">
+                <div className="text-center">
+                    <h1 className="text-3xl font-bold text-gray-800">Admin Portal</h1>
+                    <p className="mt-2 text-gray-600">Please log in to continue.</p>
+                </div>
+
+                <form onSubmit={handleLogin} className="space-y-4">
+                    <div>
+                        <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                            User ID
+                        </label>
+                        <input
+                            id="username"
+                            name="username"
+                            type="text"
+                            autoComplete="username"
+                            required
+                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-ease-blue focus:border-ease-blue"
+                            placeholder="Admin"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="password"className="block text-sm font-medium text-gray-700">
+                            Password
+                        </label>
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            autoComplete="current-password"
+                            required
+                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-ease-blue focus:border-ease-blue"
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
+                    </div>
+                    
+                    {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+
+                    <p className="text-center text-xs text-gray-400 pt-2">For development, use: <span className="font-mono font-bold text-gray-600">Admin</span> / <span className="font-mono font-bold text-gray-600">1234</span></p>
+
+                    <div>
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-ease-blue hover:bg-ease-blue/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ease-blue disabled:bg-ease-blue/50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {isLoading ? <LoaderIcon /> : 'Login'}
+                        </button>
+                    </div>
+                     <p className="px-8 text-center text-xs text-gray-500">
+                        Authorized personnel only — Chartered Ease Admin Portal.
+                    </p>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+export default AdminLoginPage;

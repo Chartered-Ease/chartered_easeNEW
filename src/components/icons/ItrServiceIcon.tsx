@@ -1,0 +1,7 @@
+import React from 'react';
+
+export const ItrServiceIcon: React.FC = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-ease-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M11 11V3m0 8h8m-8 0l-8 8" />
+  </svg>
+);
