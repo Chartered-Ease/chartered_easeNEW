@@ -3,7 +3,7 @@ import React, { createContext, useState, useContext, useEffect, ReactNode } from
 import { browserLocalPersistence, onAuthStateChanged, setPersistence, signInWithPopup, signOut, User as FirebaseUser } from 'firebase/auth';
 import { useClientManager } from './useProfile';
 import { useAppContext } from './useAppContext';
-import { firebaseAuth, googleProvider, isFirebaseConfigured } from '../lib/firebase';
+import { firebaseAuth, googleProvider } from '../lib/firebase';
 
 export interface User {
     authProvider: 'phone' | 'google';
@@ -19,7 +19,6 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   user: User | null;
-  isGoogleLoginAvailable: boolean;
   login: (mobileNumber: string) => User;
   loginWithGoogle: () => Promise<User>;
   createEntity: (name: string, entityType: string) => void;
@@ -181,7 +180,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isLoading, user, isGoogleLoginAvailable: isFirebaseConfigured, login, loginWithGoogle, createEntity, switchEntity, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, user, login, loginWithGoogle, createEntity, switchEntity, logout }}>
       {children}
     </AuthContext.Provider>
   );

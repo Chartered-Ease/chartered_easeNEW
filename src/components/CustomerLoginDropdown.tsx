@@ -33,7 +33,7 @@ const CustomerLoginDropdown: React.FC<Props> = ({
   const [error, setError] = useState('');
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const { login, loginWithGoogle, isGoogleLoginAvailable } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const { setPage } = useAppContext();
 
   useEffect(() => {
@@ -178,18 +178,12 @@ const CustomerLoginDropdown: React.FC<Props> = ({
             <button
               type="button"
               onClick={handleGoogleLogin}
-              disabled={isGoogleLoading || !isGoogleLoginAvailable}
+              disabled={isGoogleLoading}
               className="flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-ease-electric/30 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isGoogleLoading ? <LoaderIcon /> : <GoogleIcon />}
               Continue with Google
             </button>
-
-            {!isGoogleLoginAvailable && (
-              <p className="mt-2 rounded-2xl border border-amber-100 bg-amber-50 p-2 text-center text-xs font-bold text-amber-700">
-                Google sign-in is unavailable in this environment.
-              </p>
-            )}
 
             <div className="my-4 flex items-center gap-3">
               <span className="h-px flex-1 bg-slate-200" />
