@@ -1,5 +1,6 @@
 import { getApps, initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 const configuredAuthDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN;
 const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
@@ -26,3 +27,4 @@ export const isFirebaseConfigured = Boolean(
 
 export const firebaseApp = isFirebaseConfigured ? getApps()[0] || initializeApp(firebaseConfig) : null;
 export const firebaseAuth = firebaseApp ? getAuth(firebaseApp) : null;
+export const firebaseDb = firebaseApp ? getFirestore(firebaseApp) : null;

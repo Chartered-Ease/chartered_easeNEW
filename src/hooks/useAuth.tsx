@@ -1,9 +1,10 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { browserLocalPersistence, GoogleAuthProvider, onAuthStateChanged, setPersistence, signInWithPopup, signOut, User as FirebaseUser } from 'firebase/auth';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useClientManager } from './useProfile';
 import { useAppContext } from './useAppContext';
-import { firebaseAuth } from '../lib/firebase';
+import { firebaseAuth, firebaseDb } from '../lib/firebase';
 
 export interface User {
     authProvider: 'phone' | 'google';
@@ -126,6 +127,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return userData;
   };
 
+  const ensureFirestoreUserDocument = async (firebaseUser: FirebaseUser) => {
+    if (!firebaseDb) {
+      throw new Error('Firestore is not configured. Add Firebase environment variables before using Google login.');
+    }
+
+    const userRef = doc(firebaseDb, 'users', firebaseUser.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) return;
+
+    await setDoc(userRef, {
+      name: firebaseUser.displayName || '',
+      email: firebaseUser.email || '',
+      role: 'client',
+      createdAt: serverTimestamp(),
+    });
+  };
+
   const loginWithGoogle = async (): Promise<User> => {
     if (!firebaseAuth) {
       throw new Error('Google login is not configured. Add Firebase environment variables and enable Google sign-in in Firebase Authentication.');
@@ -140,6 +159,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     const result = await signInWithPopup(firebaseAuth, provider);
+    await ensureFirestoreUserDocument(result.user);
     const googleUser = attachExistingEntity(buildGoogleUser(result.user));
     persistCustomerSession(googleUser);
     return googleUser;
