@@ -1,8 +1,7 @@
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { firebaseDb } from './firebase';
+import { firebaseAuth, firebaseDb } from './firebase';
 
 export interface CreateProjectInput {
-  userId: string;
   entityId: string;
   entityName: string;
   entityType: string;
@@ -12,7 +11,6 @@ export interface CreateProjectInput {
 const pendingProjectKeys = new Set<string>();
 
 export const createProject = async ({
-  userId,
   entityId,
   entityName,
   entityType,
@@ -22,7 +20,13 @@ export const createProject = async ({
     throw new Error('Firestore is not configured. Please check Firebase environment variables.');
   }
 
-  const pendingKey = `${userId}::${entityId}::${service}`;
+  const currentUser = firebaseAuth?.currentUser;
+
+  if (!currentUser) {
+    throw new Error('Please login before creating a project.');
+  }
+
+  const pendingKey = `${currentUser.uid}::${entityId}::${service}`;
 
   if (pendingProjectKeys.has(pendingKey)) {
     throw new Error('Project creation is already in progress.');
@@ -32,14 +36,19 @@ export const createProject = async ({
 
   try {
     const projectRef = await addDoc(collection(firebaseDb, 'projects'), {
-      userId,
+      userId: currentUser.uid,
       entityId,
       entityName,
       entityType,
       service,
       status: 'pending',
+      assignedTo: 'unassigned',
       createdAt: serverTimestamp(),
     });
+
+    if (typeof window !== 'undefined') {
+      window.alert('Project created successfully.');
+    }
 
     return projectRef.id;
   } finally {

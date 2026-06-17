@@ -266,7 +266,6 @@ const CustomerDashboardPage: React.FC = () => {
 
         try {
             await createProject({
-                userId: user.firebaseUid,
                 entityId: selectedEntity.id,
                 entityName: selectedEntity.name,
                 entityType: getEntityLabel(selectedEntity.entityType),
